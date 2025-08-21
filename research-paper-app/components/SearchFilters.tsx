@@ -14,24 +14,27 @@ import {
 interface SearchFiltersProps {
   filters: Filters;
   onFiltersChange: (filters: Filters) => void;
+  onApplyFilters: () => void;
   resultCount?: number;
+  loading?: boolean;
 }
 
-export default function SearchFilters({ filters, onFiltersChange, resultCount }: SearchFiltersProps) {
+export default function SearchFilters({ filters, onFiltersChange, onApplyFilters, resultCount, loading }: SearchFiltersProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [topicSearch, setTopicSearch] = useState('');
   const [filteredTopics, setFilteredTopics] = useState(RESEARCH_TOPICS);
+  const [localFilters, setLocalFilters] = useState<Filters>(filters);
 
   // Calculate active filter count
   const getActiveFilterCount = () => {
     let count = 0;
-    if (filters.yearMin !== DEFAULT_FILTERS.yearMin || filters.yearMax !== DEFAULT_FILTERS.yearMax) count++;
-    if (filters.types.length !== DEFAULT_FILTERS.types.length || 
-        !filters.types.every(type => DEFAULT_FILTERS.types.includes(type))) count++;
-    if (filters.openAccess !== DEFAULT_FILTERS.openAccess) count++;
-    if (filters.minCitations !== DEFAULT_FILTERS.minCitations) count++;
-    if (filters.sortBy !== DEFAULT_FILTERS.sortBy) count++;
-    if (filters.topics.length > 0) count++;
+    if (localFilters.yearMin !== DEFAULT_FILTERS.yearMin || localFilters.yearMax !== DEFAULT_FILTERS.yearMax) count++;
+    if (localFilters.types.length !== DEFAULT_FILTERS.types.length || 
+        !localFilters.types.every(type => DEFAULT_FILTERS.types.includes(type))) count++;
+    if (localFilters.openAccess !== DEFAULT_FILTERS.openAccess) count++;
+    if (localFilters.minCitations !== DEFAULT_FILTERS.minCitations) count++;
+    if (localFilters.sortBy !== DEFAULT_FILTERS.sortBy) count++;
+    if (localFilters.topics.length > 0) count++;
     return count;
   };
 
@@ -47,20 +50,32 @@ export default function SearchFilters({ filters, onFiltersChange, resultCount }:
     }
   }, [topicSearch]);
 
-  const updateFilter = (key: keyof Filters, value: any) => {
-    const newFilters = { ...filters, [key]: value };
-    onFiltersChange(newFilters);
+  // Update local filters when props change
+  useEffect(() => {
+    setLocalFilters(filters);
+  }, [filters]);
+
+  const updateLocalFilter = (key: keyof Filters, value: any) => {
+    const newFilters = { ...localFilters, [key]: value };
+    setLocalFilters(newFilters);
   };
 
   const toggleTopic = (topicId: string) => {
-    const newTopics = filters.topics.includes(topicId)
-      ? filters.topics.filter(id => id !== topicId)
-      : [...filters.topics, topicId];
-    updateFilter('topics', newTopics);
+    const newTopics = localFilters.topics.includes(topicId)
+      ? localFilters.topics.filter(id => id !== topicId)
+      : [...localFilters.topics, topicId];
+    updateLocalFilter('topics', newTopics);
   };
 
   const clearAllFilters = () => {
-    onFiltersChange(DEFAULT_FILTERS);
+    const defaultFilters = DEFAULT_FILTERS;
+    setLocalFilters(defaultFilters);
+    onFiltersChange(defaultFilters);
+  };
+
+  const applyFilters = () => {
+    onFiltersChange(localFilters);
+    onApplyFilters();
   };
 
   const activeFilterCount = getActiveFilterCount();
@@ -102,28 +117,28 @@ export default function SearchFilters({ filters, onFiltersChange, resultCount }:
           {/* Year Range */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Publication Year ({filters.yearMin} - {filters.yearMax})
+              Publication Year ({localFilters.yearMin} - {localFilters.yearMax})
             </label>
             <div className="space-y-2">
               <input
                 type="range"
                 min="1900"
                 max="2024"
-                value={filters.yearMin}
-                onChange={(e) => updateFilter('yearMin', parseInt(e.target.value))}
+                value={localFilters.yearMin}
+                onChange={(e) => updateLocalFilter('yearMin', parseInt(e.target.value))}
                 className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
               />
               <input
                 type="range"
                 min="1900"
                 max="2024"
-                value={filters.yearMax}
-                onChange={(e) => updateFilter('yearMax', parseInt(e.target.value))}
+                value={localFilters.yearMax}
+                onChange={(e) => updateLocalFilter('yearMax', parseInt(e.target.value))}
                 className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
               />
               <div className="flex justify-between text-xs text-gray-500">
-                <span>{filters.yearMin}</span>
-                <span>{filters.yearMax}</span>
+                <span>{localFilters.yearMin}</span>
+                <span>{localFilters.yearMax}</span>
               </div>
             </div>
           </div>
@@ -138,12 +153,12 @@ export default function SearchFilters({ filters, onFiltersChange, resultCount }:
                 <label key={type.value} className="flex items-center">
                   <input
                     type="checkbox"
-                    checked={filters.types.includes(type.value)}
+                    checked={localFilters.types.includes(type.value)}
                     onChange={(e) => {
                       const newTypes = e.target.checked
-                        ? [...filters.types, type.value]
-                        : filters.types.filter(t => t !== type.value);
-                      updateFilter('types', newTypes);
+                        ? [...localFilters.types, type.value]
+                        : localFilters.types.filter(t => t !== type.value);
+                      updateLocalFilter('types', newTypes);
                     }}
                     className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                   />
@@ -158,8 +173,8 @@ export default function SearchFilters({ filters, onFiltersChange, resultCount }:
             <label className="flex items-center">
               <input
                 type="checkbox"
-                checked={filters.openAccess}
-                onChange={(e) => updateFilter('openAccess', e.target.checked)}
+                checked={localFilters.openAccess}
+                onChange={(e) => updateLocalFilter('openAccess', e.target.checked)}
                 className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
               />
               <span className="ml-2 text-sm font-medium text-gray-700">Open Access Only</span>
@@ -172,8 +187,8 @@ export default function SearchFilters({ filters, onFiltersChange, resultCount }:
               Minimum Citations
             </label>
             <select
-              value={filters.minCitations.toString()}
-              onChange={(e) => updateFilter('minCitations', parseInt(e.target.value))}
+              value={localFilters.minCitations.toString()}
+              onChange={(e) => updateLocalFilter('minCitations', parseInt(e.target.value))}
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             >
               {CITATION_OPTIONS.map((option) => (
@@ -190,8 +205,8 @@ export default function SearchFilters({ filters, onFiltersChange, resultCount }:
               Sort By
             </label>
             <select
-              value={filters.sortBy}
-              onChange={(e) => updateFilter('sortBy', e.target.value)}
+              value={localFilters.sortBy}
+              onChange={(e) => updateLocalFilter('sortBy', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             >
               {SORT_OPTIONS.map((option) => (
@@ -218,9 +233,9 @@ export default function SearchFilters({ filters, onFiltersChange, resultCount }:
               />
               
               {/* Selected topics */}
-              {filters.topics.length > 0 && (
+              {localFilters.topics.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-2">
-                  {filters.topics.map((topicId) => {
+                  {localFilters.topics.map((topicId) => {
                     const topic = RESEARCH_TOPICS.find(t => t.id === topicId);
                     return topic ? (
                       <span
@@ -246,7 +261,7 @@ export default function SearchFilters({ filters, onFiltersChange, resultCount }:
                   <label key={topic.id} className="flex items-center px-3 py-2 hover:bg-gray-50">
                     <input
                       type="checkbox"
-                      checked={filters.topics.includes(topic.id)}
+                      checked={localFilters.topics.includes(topic.id)}
                       onChange={() => toggleTopic(topic.id)}
                       className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                     />
@@ -257,17 +272,32 @@ export default function SearchFilters({ filters, onFiltersChange, resultCount }:
             </div>
           </div>
 
-          {/* Clear Filters */}
-          {activeFilterCount > 0 && (
-            <div className="pt-4 border-t border-gray-200">
+          {/* Action Buttons */}
+          <div className="pt-4 border-t border-gray-200 space-y-2">
+            <button
+              onClick={applyFilters}
+              disabled={loading}
+              className="w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
+            >
+              {loading ? (
+                <div className="flex items-center justify-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Applying...
+                </div>
+              ) : (
+                'Apply Filters'
+              )}
+            </button>
+            
+            {activeFilterCount > 0 && (
               <button
                 onClick={clearAllFilters}
                 className="w-full px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
                 Clear All Filters
               </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>

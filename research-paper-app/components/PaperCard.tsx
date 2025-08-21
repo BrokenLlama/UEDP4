@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useRouter } from 'next/router';
 import type { Paper } from '@/types/paper';
 
 interface PaperCardProps {
@@ -7,7 +8,11 @@ interface PaperCardProps {
 }
 
 export function PaperCard({ paper, onSelect }: PaperCardProps) {
-  const [expanded, setExpanded] = useState(false);
+  const router = useRouter();
+
+  const handleTitleClick = () => {
+    router.push(`/paper/${paper.paperId}`);
+  };
 
   const handleCardClick = () => {
     if (onSelect) {
@@ -23,8 +28,11 @@ export function PaperCard({ paper, onSelect }: PaperCardProps) {
 
   return (
     <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 hover:shadow-md transition-shadow">
-      {/* Title */}
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400" onClick={handleCardClick}>
+      {/* Title - Clickable to go to detail page */}
+      <h3 
+        className="text-lg font-semibold text-gray-900 dark:text-white mb-2 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400" 
+        onClick={handleTitleClick}
+      >
         {paper.title}
       </h3>
 
@@ -34,7 +42,7 @@ export function PaperCard({ paper, onSelect }: PaperCardProps) {
       </p>
 
       {/* Metadata Row */}
-      <div className="flex flex-wrap gap-4 text-sm text-gray-500 dark:text-gray-400 mb-3">
+      <div className="flex flex-wrap gap-4 text-sm text-gray-500 dark:text-gray-400">
         {paper.year && (
           <span className="flex items-center gap-1">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -56,34 +64,15 @@ export function PaperCard({ paper, onSelect }: PaperCardProps) {
         {paper.citationCount !== undefined && (
           <span className="flex items-center gap-1">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h6" />
             </svg>
             {paper.citationCount} citations
           </span>
         )}
       </div>
 
-      {/* Abstract */}
-      {paper.abstract && (
-        <div className="mb-4">
-          <p className={`text-gray-700 dark:text-gray-300 text-sm leading-relaxed ${
-            expanded ? '' : 'line-clamp-3'
-          }`}>
-            {paper.abstract}
-          </p>
-          {paper.abstract.length > 200 && (
-            <button
-              onClick={() => setExpanded(!expanded)}
-              className="text-blue-600 dark:text-blue-400 text-sm hover:underline mt-1"
-            >
-              {expanded ? 'Show less' : 'Show more'}
-            </button>
-          )}
-        </div>
-      )}
-
       {/* Action Buttons */}
-      <div className="flex gap-2 pt-3 border-t border-gray-100 dark:border-gray-700">
+      <div className="flex gap-2 pt-3 border-t border-gray-100 dark:border-gray-700 mt-3">
         {paper.url && (
           <a
             href={paper.url}
@@ -121,6 +110,43 @@ export function PaperCard({ paper, onSelect }: PaperCardProps) {
           </svg>
           Add to Collection
         </button>
+
+        {paper.pdfUrl && (
+          <button
+            onClick={async () => {
+              try {
+                const response = await fetch('/api/download-pdf', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    pdfUrl: paper.pdfUrl,
+                    filename: `${paper.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`
+                  })
+                });
+                
+                if (response.ok) {
+                  const blob = await response.blob();
+                  const url = window.URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `${paper.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`;
+                  document.body.appendChild(a);
+                  a.click();
+                  window.URL.revokeObjectURL(url);
+                  document.body.removeChild(a);
+                }
+              } catch (error) {
+                console.error('Error downloading PDF:', error);
+              }
+            }}
+            className="flex items-center gap-1 px-3 py-1 text-sm bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 rounded-md hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Download PDF
+          </button>
+        )}
       </div>
     </div>
   );

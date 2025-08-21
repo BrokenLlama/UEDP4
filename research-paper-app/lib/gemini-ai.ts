@@ -1,143 +1,114 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import type { Paper } from '@/types/paper';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+export class GeminiAIClient {
+  private genAI!: GoogleGenerativeAI;
+  private model: any;
 
-export class GeminiAI {
-  private static model = genAI.getGenerativeModel({ model: 'gemini-pro' });
-  private static embeddingModel = genAI.getGenerativeModel({ model: 'embedding-001' });
-
-  // Generate embeddings for text (paper title + abstract)
-  static async generateEmbedding(text: string): Promise<number[]> {
+  constructor() {
+    const apiKey = process.env.GOOGLE_AI_API_KEY;
+    if (!apiKey) {
+      console.warn('GOOGLE_AI_API_KEY environment variable is not set. AI features will not work.');
+      return;
+    }
+    
     try {
-      const result = await this.embeddingModel.embedContent(text);
-      const embedding = await result.embedding;
-      return embedding.values;
+      this.genAI = new GoogleGenerativeAI(apiKey);
+      this.model = this.genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
     } catch (error) {
-      console.error('Error generating embedding:', error);
-      throw new Error('Failed to generate embedding');
+      console.error('Error initializing Google AI client:', error);
+      throw new Error('Failed to initialize Google AI client');
     }
   }
 
-  // Generate paper summary using Gemini
-  static async generateSummary(paper: { title: string; abstract?: string }): Promise<string> {
-    try {
-      const prompt = `
-        Please provide a concise summary of this research paper in 2-3 sentences:
-        
-        Title: ${paper.title}
-        Abstract: ${paper.abstract || 'No abstract available'}
-        
-        Focus on the main contributions and key findings.
-      `;
-
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
-      return response.text();
-    } catch (error) {
-      console.error('Error generating summary:', error);
-      return 'Summary generation failed';
+  async generateEmbedding(text: string): Promise<number[]> {
+    if (!this.genAI) {
+      throw new Error('Google AI client not initialized. Please set GOOGLE_AI_API_KEY environment variable.');
     }
+    
+    const embeddingModel = this.genAI.getGenerativeModel({ model: 'embedding-001' });
+    const result = await embeddingModel.embedContent(text);
+    return result.embedding.values;
   }
 
-  // Generate research insights and connections
-  static async generateInsights(papers: Array<{ title: string; abstract?: string }>): Promise<string> {
-    try {
-      const papersText = papers.map((paper, index) => 
-        `${index + 1}. ${paper.title}\n   ${paper.abstract || 'No abstract'}\n`
-      ).join('\n');
-
-      const prompt = `
-        Analyze these research papers and provide insights on:
-        1. Common themes and connections
-        2. Research gaps and opportunities
-        3. Potential future directions
-        
-        Papers:
-        ${papersText}
-        
-        Provide a structured analysis with clear sections.
-      `;
-
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
-      return response.text();
-    } catch (error) {
-      console.error('Error generating insights:', error);
-      return 'Insight generation failed';
+  async chatWithPaper(message: string, paperContext: string, chatHistory: any[] = []) {
+    if (!this.genAI) {
+      throw new Error('Google AI client not initialized. Please set GOOGLE_AI_API_KEY environment variable.');
     }
+    
+    const model = this.genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    
+    // Format chat history correctly
+    const formattedHistory = chatHistory.map(msg => ({
+      role: msg.role === 'assistant' ? 'model' : msg.role,  // Map assistant → model
+      parts: [{ text: msg.content || msg.parts || msg.text }]  // Ensure array format
+    }));
+    
+    // Add paper context as system message
+    const contextMessage = {
+      role: "user",
+      parts: [{ text: `Paper context: ${paperContext}` }]
+    };
+    
+    const chat = model.startChat({
+      history: [contextMessage, ...formattedHistory]
+    });
+    
+    const result = await chat.sendMessage([{ text: message }]);
+    return result.response.text();
   }
 
-  // Generate search suggestions based on query
-  static async generateSearchSuggestions(query: string): Promise<string[]> {
-    try {
-      const prompt = `
-        Based on this research query: "${query}"
-        
-        Generate 5 related search terms or phrases that would help find relevant papers.
-        Return only the search terms, one per line, without numbering or additional text.
-      `;
-
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
-      const suggestions = response.text().split('\n').filter(s => s.trim());
-      
-      return suggestions.slice(0, 5);
-    } catch (error) {
-      console.error('Error generating search suggestions:', error);
-      return [];
+  async summarizePaper(paper: Paper): Promise<string> {
+    if (!this.model) {
+      throw new Error('Google AI client not initialized. Please set GOOGLE_AI_API_KEY environment variable.');
     }
+    const prompt = `
+Please provide a comprehensive summary of the following research paper:
+
+Title: ${paper.title}
+Authors: ${paper.authors?.map(a => a.name).join(', ') || 'Unknown'}
+Year: ${paper.year || 'Unknown'}
+Abstract: ${paper.abstract || 'No abstract available'}
+${paper.fullText ? `Full Text: ${paper.fullText.substring(0, 3000)}...` : ''}
+
+Please include:
+1. Main research question or objective
+2. Methodology used
+3. Key findings
+4. Implications and significance
+5. Limitations (if any)
+
+Keep the summary clear and accessible to a general academic audience.
+`;
+
+    const result = await this.model.generateContent(prompt);
+    const response = await result.response;
+    return response.text();
   }
 
-  // Classify paper by research area
-  static async classifyPaper(paper: { title: string; abstract?: string }): Promise<string[]> {
-    try {
-      const prompt = `
-        Classify this research paper into relevant research areas:
-        
-        Title: ${paper.title}
-        Abstract: ${paper.abstract || 'No abstract available'}
-        
-        Return only the research areas, separated by commas, without additional text.
-        Examples: Machine Learning, Computer Vision, Natural Language Processing, etc.
-      `;
-
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
-      const classifications = response.text().split(',').map(c => c.trim());
-      
-      return classifications;
-    } catch (error) {
-      console.error('Error classifying paper:', error);
-      return ['Unclassified'];
+  async extractKeyInsights(paper: Paper): Promise<string[]> {
+    if (!this.model) {
+      throw new Error('Google AI client not initialized. Please set GOOGLE_AI_API_KEY environment variable.');
     }
-  }
+    const prompt = `
+Extract the key insights and main points from this research paper:
 
-  // Generate paper recommendations based on user interests
-  static async generateRecommendations(
-    userInterests: string[],
-    recentPapers: Array<{ title: string; abstract?: string }>
-  ): Promise<string[]> {
-    try {
-      const interestsText = userInterests.join(', ');
-      const papersText = recentPapers.map(p => p.title).join('\n- ');
+Title: ${paper.title}
+Abstract: ${paper.abstract || 'No abstract available'}
+${paper.fullText ? `Full Text: ${paper.fullText.substring(0, 2000)}...` : ''}
 
-      const prompt = `
-        Based on these user interests: ${interestsText}
-        And their recent paper history:
-        - ${papersText}
-        
-        Generate 5 specific research paper search queries that would likely interest this user.
-        Return only the search queries, one per line, without numbering or additional text.
-      `;
+Please provide 5-7 key insights as bullet points. Focus on:
+- Main findings
+- Novel contributions
+- Important implications
+- Key methodologies
+- Significant results
 
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
-      const recommendations = response.text().split('\n').filter(s => s.trim());
-      
-      return recommendations.slice(0, 5);
-    } catch (error) {
-      console.error('Error generating recommendations:', error);
-      return [];
-    }
+Format as a simple list of insights.
+`;
+
+    const result = await this.model.generateContent(prompt);
+    const response = await result.response;
+    return response.text().split('\n').filter((line: string) => line.trim().startsWith('-') || line.trim().startsWith('•'));
   }
 }

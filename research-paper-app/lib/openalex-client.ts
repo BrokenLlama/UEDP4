@@ -262,4 +262,44 @@ export class OpenAlexClient {
       sort: 'cited_by_count:desc'
     });
   }
+
+  // Get citations for a specific work
+  async getCitations(workId: string, limit: number = 50): Promise<OpenAlexWork[]> {
+    const url = `${this.baseURL}/works/${workId}/cited_by?per_page=${limit}`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'Research-Paper-App/1.0'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`OpenAlex API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.results || [];
+  }
+
+  // Get references for a specific work
+  async getReferences(workId: string, limit: number = 50): Promise<OpenAlexWork[]> {
+    const url = `${this.baseURL}/works/${workId}/references?per_page=${limit}`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'Research-Paper-App/1.0'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`OpenAlex API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.results || [];
+  }
 }

@@ -9,10 +9,12 @@
     "postinstall": "tailwindcss -v >/dev/null 2>&1 || true"
   },
   "dependencies": {
-    "@google/generative-ai": "latest",
+    "@google/generative-ai": "^0.24.1",
     "@supabase/supabase-js": "^2.0.0",
+    "axios": "^1.11.0",
     "crypto-js": "latest",
     "next": "^14.0.0",
+    "pdf-parse": "^1.1.1",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
     "semanticscholarjs": "latest",

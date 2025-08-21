@@ -36,13 +36,6 @@ export default function SearchResults({ query, initialResults = [], onSearch }: 
     localStorage.setItem('searchFilters', JSON.stringify(filters));
   }, [filters]);
 
-  // Search with filters when query or filters change
-  useEffect(() => {
-    if (query.trim() && onSearch) {
-      performSearch();
-    }
-  }, [query, filters]);
-
   const performSearch = async () => {
     if (!onSearch) return;
 
@@ -62,6 +55,10 @@ export default function SearchResults({ query, initialResults = [], onSearch }: 
 
   const handleFiltersChange = (newFilters: Filters) => {
     setFilters(newFilters);
+  };
+
+  const handleApplyFilters = () => {
+    performSearch();
   };
 
   const clearFilters = () => {
@@ -90,7 +87,9 @@ export default function SearchResults({ query, initialResults = [], onSearch }: 
               <SearchFilters
                 filters={filters}
                 onFiltersChange={handleFiltersChange}
+                onApplyFilters={handleApplyFilters}
                 resultCount={results.length}
+                loading={loading}
               />
             </div>
           </div>
