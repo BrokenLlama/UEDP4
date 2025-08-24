@@ -43,10 +43,12 @@ export class VectorStore {
 
   private saveData() {
     try {
+      console.log(`💾 Saving vector store data to ${this.dataPath}...`);
       const entries = Object.fromEntries(this.data);
       fs.writeFileSync(this.dataPath, JSON.stringify(entries, null, 2));
+      console.log(`✅ Vector store data saved successfully. Total papers: ${this.data.size}`);
     } catch (error) {
-      console.error('Error saving vector store data:', error);
+      console.error('❌ Error saving vector store data:', error);
     }
   }
 
@@ -58,17 +60,28 @@ export class VectorStore {
     embedding: number[];
     metadata: Record<string, any>;
   }) {
+    console.log(`📝 Adding paper ${paper.paperId} to vector store...`);
+    
     const entry: VectorStoreEntry = {
       ...paper,
       timestamp: new Date().toISOString()
     };
 
     this.data.set(paper.paperId, entry);
+    console.log(`💾 Paper ${paper.paperId} added to memory, saving to disk...`);
+    
     this.saveData();
+    console.log(`✅ Paper ${paper.paperId} successfully saved to vector store`);
   }
 
   async getPaper(paperId: string): Promise<VectorStoreEntry | null> {
-    return this.data.get(paperId) || null;
+    const paper = this.data.get(paperId) || null;
+    if (paper) {
+      console.log(`📖 Found paper ${paperId} in vector store`);
+    } else {
+      console.log(`❌ Paper ${paperId} not found in vector store`);
+    }
+    return paper;
   }
 
   async searchPapers(query: string, nResults: number = 10): Promise<VectorStoreEntry[]> {

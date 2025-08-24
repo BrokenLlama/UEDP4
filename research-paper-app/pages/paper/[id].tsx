@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
+import Link from 'next/link';
 import type { GetServerSideProps } from 'next';
 import type { Paper } from '@/types/paper';
 import { OpenAlexClient, type OpenAlexWork } from '@/lib/openalex-client';
@@ -156,15 +157,37 @@ export default function PaperDetailPage({ paper }: PaperDetailPageProps) {
           {/* Main Content */}
           <div className="flex-1 max-w-4xl mx-auto px-8 py-6">
             {/* Navigation */}
-            <button 
-              onClick={() => router.back()}
-              className="flex items-center text-blue-600 hover:text-blue-800 mb-6"
-            >
-              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              Go Back
-            </button>
+            <div className="flex items-center justify-between mb-6">
+              <button 
+                onClick={() => router.back()}
+                className="flex items-center text-blue-600 hover:text-blue-800"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                Go Back
+              </button>
+              
+              <Link 
+                href="/collections"
+                className="flex items-center text-gray-600 hover:text-gray-800"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                </svg>
+                Collections
+              </Link>
+              
+              <Link 
+                href="/editor-demo"
+                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                Edit Document
+              </Link>
+            </div>
 
             {/* Paper Metadata */}
             <div className="mb-6">

@@ -80,18 +80,13 @@ export function CollectionsManager({ selectedPaper, onPaperAdded }: CollectionsM
     setError(null);
 
     try {
-      const collection = collections.find(c => c.id === collectionId);
-      if (!collection) throw new Error('Collection not found');
-
-      const updatedPapers = [...collection.papers, paper];
-
       const response = await fetch(`/api/collections?id=${collectionId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          papers: updatedPapers
+          addPaper: paper
         }),
       });
 
@@ -118,18 +113,13 @@ export function CollectionsManager({ selectedPaper, onPaperAdded }: CollectionsM
     setError(null);
 
     try {
-      const collection = collections.find(c => c.id === collectionId);
-      if (!collection) throw new Error('Collection not found');
-
-      const updatedPapers = collection.papers.filter(p => p.paperId !== paperId);
-
       const response = await fetch(`/api/collections?id=${collectionId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          papers: updatedPapers
+          removePaper: paperId
         }),
       });
 

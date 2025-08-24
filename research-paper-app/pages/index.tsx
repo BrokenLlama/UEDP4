@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Head from 'next/head';
+import Link from 'next/link';
 import EnhancedSearchInterface from '@/components/EnhancedSearchInterface';
 import type { Paper } from '@/types/paper';
 
@@ -38,9 +39,21 @@ export default function Home() {
               </div>
               
               <div className="flex items-center gap-4">
-                <button className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+                <Link 
+                  href="/editor-demo"
+                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors"
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Create Document
+                </Link>
+                <Link 
+                  href="/collections"
+                  className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                >
                   Collections
-                </button>
+                </Link>
                 <button className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   Settings
                 </button>

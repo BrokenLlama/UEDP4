@@ -2,16 +2,31 @@ import React, { useState, useRef, useEffect } from 'react';
 import type { ChatMessage } from '@/types/paper';
 
 interface PaperChatProps {
-  paperId: string;
-  paperTitle: string;
+  paperId?: string;
+  paperTitle?: string;
+  collectionId?: string;
+  collectionName?: string;
+  paperCount?: number;
 }
 
-export function PaperChat({ paperId, paperTitle }: PaperChatProps) {
+export function PaperChat({ 
+  paperId, 
+  paperTitle, 
+  collectionId, 
+  collectionName, 
+  paperCount 
+}: PaperChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const isCollectionChat = !!collectionId;
+  const chatTitle = isCollectionChat ? collectionName : paperTitle;
+  const chatSubtitle = isCollectionChat 
+    ? `${paperCount} paper${paperCount !== 1 ? 's' : ''} in collection`
+    : paperTitle;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -37,19 +52,31 @@ export function PaperChat({ paperId, paperTitle }: PaperChatProps) {
     setError(null);
 
     try {
-      const response = await fetch('/api/chat-with-paper', {
+      const endpoint = isCollectionChat ? '/api/chat-with-collection' : '/api/chat-with-paper';
+      const body = isCollectionChat 
+        ? {
+            collectionId,
+            message: inputMessage,
+            chatHistory: messages.map(msg => ({
+              role: msg.role,
+              content: msg.content
+            }))
+          }
+        : {
+            paperId,
+            message: inputMessage,
+            chatHistory: messages.map(msg => ({
+              role: msg.role,
+              content: msg.content
+            }))
+          };
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          paperId,
-          message: inputMessage,
-          chatHistory: messages.map(msg => ({
-            role: msg.role,
-            content: msg.content
-          }))
-        }),
+        body: JSON.stringify(body),
       });
 
       const data = await response.json();
@@ -90,8 +117,10 @@ export function PaperChat({ paperId, paperTitle }: PaperChatProps) {
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200">
         <div>
-          <h3 className="text-lg font-semibold text-gray-900">Chat with Paper</h3>
-          <p className="text-sm text-gray-600 truncate">{paperTitle}</p>
+          <h3 className="text-lg font-semibold text-gray-900">
+            {isCollectionChat ? 'Chat with Collection' : 'Chat with Paper'}
+          </h3>
+          <p className="text-sm text-gray-600 truncate">{chatSubtitle}</p>
         </div>
         <button
           onClick={clearChat}
@@ -108,8 +137,18 @@ export function PaperChat({ paperId, paperTitle }: PaperChatProps) {
             <svg className="mx-auto h-12 w-12 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
-            <p>Start a conversation about this paper</p>
-            <p className="text-xs mt-2">Ask about methodology, findings, implications, or any specific aspects</p>
+            <p>
+              {isCollectionChat 
+                ? 'Start a conversation about this collection'
+                : 'Start a conversation about this paper'
+              }
+            </p>
+            <p className="text-xs mt-2">
+              {isCollectionChat 
+                ? 'Ask about individual papers, relationships between papers, themes, or comparisons'
+                : 'Ask about methodology, findings, implications, or any specific aspects'
+              }
+            </p>
           </div>
         )}
 
@@ -164,7 +203,11 @@ export function PaperChat({ paperId, paperTitle }: PaperChatProps) {
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="Ask a question about this paper..."
+            placeholder={
+              isCollectionChat 
+                ? "Ask about this collection of papers..."
+                : "Ask a question about this paper..."
+            }
             className="flex-1 px-3 py-2 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             rows={2}
             disabled={isLoading}

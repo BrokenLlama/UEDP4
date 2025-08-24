@@ -1,5 +1,5 @@
 import axios from 'axios';
-import * as pdfParse from 'pdf-parse';
+import pdfParse from 'pdf-parse';
 import fs from 'fs';
 import path from 'path';
 
@@ -88,10 +88,7 @@ export class PDFProcessor {
       } catch (parseError) {
         // If standard parsing fails, try with different options
         console.log('Standard PDF parsing failed, trying with alternative options...');
-        data = await pdfParse(pdfBuffer, {
-          normalizeWhitespace: true,
-          disableCombineTextItems: false
-        });
+        data = await pdfParse(pdfBuffer);
       }
       
       return {
